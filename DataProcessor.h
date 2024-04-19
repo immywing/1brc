@@ -2,9 +2,7 @@
 #ifndef DATA_PROCESSOR_H
 #define DATA_PROCESSOR_H
 
-#include <cmath>
 #include <iostream>
-#include <fstream>
 #include <string>
 #include <map>
 #include <unordered_map>

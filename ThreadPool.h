@@ -7,26 +7,18 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
-#include <future>
 #include <fstream>
-#include <map>
 #include <unordered_map>
 #include "WStationData.h"
-#include <sstream>
-#include <iostream>
-#include <functional>
 
 class ThreadPool {
 private:
-    int x = 0;
-    size_t nThreads;
-    std::vector<std::thread> workers_;
-    std::queue<std::vector<char>> tasks_;
-    std::mutex mutex_;
-    std::condition_variable condition_;
+    std::vector<std::thread> workers;
+    std::queue<std::vector<char>> tasks;
+    std::mutex mtx;
+    std::condition_variable condition;
     std::unordered_map<size_t, std::unordered_map<std::string, WStationData>>& map;
-    bool start;
-    bool stop_;
+    bool stop;
     const char semicolon = ';';
     const char newline = '\n';
     const char dot = '.';
@@ -35,7 +27,7 @@ private:
     void processChunk(std::vector<char>&&, size_t& threadId);
 public:
     ThreadPool(
-        size_t num_threads,
+        size_t& num_threads,
         std::unordered_map<size_t, std::unordered_map<std::string, WStationData>>& map
     );
     ~ThreadPool();

@@ -3,7 +3,6 @@
 #ifndef WSTATION_DATA_H
 #define WSTATION_DATA_H
 #include <string>
-#include <algorithm>
 struct WStationData 
 {
 	int min = 100;
@@ -13,7 +12,6 @@ struct WStationData
 	void update(int& value);
 	void update(WStationData& other);
 };
-
 #endif
 
 

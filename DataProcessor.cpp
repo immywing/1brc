@@ -38,7 +38,7 @@ void DataProcessor::process()
     }
     
     // Process data in chunks
-    size_t chunkSize = 1024 * 1024 * 10;  // Adjust chunk size as needed
+    size_t chunkSize = 1024 * 1024 * 100;  // Adjust chunk size as needed
     std::vector<char> buffer;
     std::vector<char> overflow;
     for (size_t offset = 0; offset < fileSize; offset += chunkSize) {
@@ -117,13 +117,13 @@ void DataProcessor::aggregateAndOutput()
     std::stringstream output;
     for (auto& pair : aggregate) {
         output
-            << "{ "
+            << "{"
             << pair.first
             << "=" << static_cast<double>(pair.second.min) / 10
             << "/" << std::fixed << std::setprecision(1) 
             << (static_cast<double>((pair.second.sum) / 10) / pair.second.count)
             << "/" << static_cast<double>(pair.second.max) / 10
-            << " }"
+            << "}"
             << std::endl;
     }
     std::cout << output.str() << std::endl;
