@@ -8,7 +8,7 @@ void WStationData::update(int& value)
 	count++;
 }
 
-void WStationData::update(WStationData& other)
+void WStationData::aggregate(WStationData& other)
 {
 	min = min < other.min ? min : other.min;
 	max = max > other.max ? max : other.max;

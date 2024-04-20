@@ -1,5 +1,5 @@
 #include "ThreadPool.h"
-
+#include <iostream>
 ThreadPool::ThreadPool(
     size_t& num_threads,
     std::unordered_map<size_t, std::unordered_map<std::string, WStationData>>& map
@@ -7,7 +7,7 @@ ThreadPool::ThreadPool(
 {
     // Create worker threads
     for (size_t i = 0; i < num_threads; ++i) {
-        map[i];
+        //map[i];
         workers.emplace_back(
             [this, i] {
                 size_t threadId = i;
@@ -45,7 +45,7 @@ ThreadPool::~ThreadPool()
 
 void ThreadPool::enqueue(std::vector<char>&& task)
 {
-    std::unique_lock<std::mutex> lock(mtx);
+    //std::unique_lock<std::mutex> lock(mtx);
     tasks.push(std::move(task));
     condition.notify_one();
 }
@@ -59,19 +59,20 @@ void ThreadPool::processChunk(std::vector<char>&& chunk, size_t& threadId)
     char c;
     int multiplier = 100;
     size_t len = 0;
+    size_t hash = 0;
     while (len < chunk.size()) {
-        c = chunk[len];
+        c = chunk.at(len);
         while (c!= semicolon) {
             *inserter = c;
             ++len;
-            c = chunk[len];
+            c = chunk.at(len);
         }
         len++;
-        c = chunk[len];
+        c = chunk.at(len);
         if (c == negative) {
             negativeValue = true; 
             len++;
-            c = chunk[len];
+            c = chunk.at(len);
         }
         while (c != newline) {
             if (c != dot) {
@@ -79,13 +80,14 @@ void ThreadPool::processChunk(std::vector<char>&& chunk, size_t& threadId)
                 multiplier /= 10;
             }
             len++;
-            c = chunk[len];
+            c = chunk.at(len);
         }
         if (negativeValue) {
-            value = value * -1;
+            value *= -1;
         }
         map[threadId][station].update(value);
         negativeValue = false;
+        hash = 0;
         value = 0;
         multiplier = 100;
         station.clear();

@@ -10,14 +10,16 @@
 #include <fstream>
 #include <unordered_map>
 #include "WStationData.h"
+#include "Bucket.h"
+#include "SimpleHash.h"
 
 class ThreadPool {
 private:
     std::vector<std::thread> workers;
-    std::queue<std::vector<char>> tasks;
     std::mutex mtx;
     std::condition_variable condition;
     std::unordered_map<size_t, std::unordered_map<std::string, WStationData>>& map;
+    
     bool stop;
     const char semicolon = ';';
     const char newline = '\n';
@@ -26,6 +28,7 @@ private:
     int floatParse(const char& v, int multiplier);
     void processChunk(std::vector<char>&&, size_t& threadId);
 public:
+    std::queue<std::vector<char>> tasks;
     ThreadPool(
         size_t& num_threads,
         std::unordered_map<size_t, std::unordered_map<std::string, WStationData>>& map

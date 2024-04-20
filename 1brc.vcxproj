@@ -133,12 +133,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="1brc.cpp" />
+    <ClCompile Include="Bucket.cpp" />
     <ClCompile Include="DataProcessor.cpp" />
+    <ClCompile Include="SimpleHash.cpp" />
     <ClCompile Include="ThreadPool.cpp" />
     <ClCompile Include="WStationData.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Bucket.h" />
     <ClInclude Include="DataProcessor.h" />
+    <ClInclude Include="SimpleHash.h" />
     <ClInclude Include="ThreadPool.h" />
     <ClInclude Include="WStationData.h" />
   </ItemGroup>

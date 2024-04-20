@@ -1,22 +1,34 @@
 #include "DataProcessor.h"
 #include <chrono>
+#include <fstream>
 
 DataProcessor::DataProcessor(std::wstring fpath, size_t nThreads) :
     fpath(fpath), nThreads(nThreads)
-{}
+{
+    for (size_t i = 0; i < nThreads; ++i) {
+        map[i].reserve(65536);
+    }
+}
 
 void DataProcessor::process() 
 {
-    std::unique_ptr<ThreadPool> _threadPool = std::make_unique<ThreadPool>(nThreads, map);
+    SYSTEM_INFO systemInfo;
+    GetSystemInfo(&systemInfo);
+
+    SIZE_T allocationGranularity =
+        systemInfo.dwPageSize > systemInfo.dwAllocationGranularity ? 
+        systemInfo.dwPageSize : systemInfo.dwAllocationGranularity;
+
+    std::unique_ptr<ThreadPool> threadPool = std::make_unique<ThreadPool>(nThreads, map);
 
     HANDLE hFile = CreateFile(
         fpath.c_str(),
         GENERIC_READ,
         FILE_SHARE_READ,
-        nullptr, 
+        0, 
         OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL,
-        nullptr
+        0
     );
 
     if (hFile == INVALID_HANDLE_VALUE) {
@@ -24,45 +36,50 @@ void DataProcessor::process()
     }
 
     // Get file size
-    DWORD fileSize = GetFileSize(hFile, nullptr);
+    LARGE_INTEGER size;
+    GetFileSizeEx(hFile, &size);
+    uint64_t fileSize = size.QuadPart;
     if (fileSize == INVALID_FILE_SIZE) {
         std::cerr << "Error getting file size" << std::endl;
         CloseHandle(hFile);
     }
 
     // Create a file mapping object
-    HANDLE hMapping = CreateFileMapping(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    HANDLE hMapping = CreateFileMapping(hFile, 0, PAGE_READONLY, 0, 0, 0);
     if (hMapping == nullptr) {
         std::cerr << "Error creating file mapping object" << std::endl;
         CloseHandle(hFile);
     }
-    
-    // Process data in chunks
-    size_t chunkSize = 1024 * 1024 * 100;  // Adjust chunk size as needed
+
+    size_t chunkSize = (fileSize / nThreads) & ~(allocationGranularity - 1);
     std::vector<char> buffer;
     std::vector<char> overflow;
     for (size_t offset = 0; offset < fileSize; offset += chunkSize) {
+  
         size_t chunkToRead = offset + chunkSize < fileSize  ? chunkSize : fileSize - offset;
         LPVOID chunkData = MapViewOfFile(hMapping, FILE_MAP_READ, 0, offset, chunkToRead);
+        //std::cout << chunkToRead << std::endl;
         if (chunkData == nullptr) {
+            std::cout << offset << std::endl;
             std::cerr << "Error mapping view of file" << std::endl;
+            DWORD err = GetLastError();
+            std::cerr << err << std::endl;
             break;
         }
         buffer = std::vector<char>(chunkToRead + overflow.size());
-        memcpy(buffer.data(), chunkData, chunkToRead);
+        std::memcpy(buffer.data(), chunkData, chunkToRead);
         buffer.insert(buffer.begin(), overflow.begin(), overflow.end());
         size_t rf = findLastNewLine(buffer);
         overflow = std::vector<char>(buffer.begin() + rf + 1, buffer.end());
         buffer.erase(buffer.begin() + rf + 1, buffer.end());
-        _threadPool->enqueue(std::move(buffer));
+        threadPool->enqueue(std::move(buffer));
         // Unmap the view when done with the chunk
         UnmapViewOfFile(chunkData);
     }
-
+    while (!threadPool->tasks.empty()) {  }
     // Close the mapping object and file handle
     CloseHandle(hMapping);
     CloseHandle(hFile);
-
 
     //std::ifstream file(fpath);
     //if (!file.is_open()) {
@@ -108,10 +125,11 @@ size_t DataProcessor::findLastNewLine(std::vector<char>& vec)
 void DataProcessor::aggregateAndOutput() 
 {
     std::unordered_map<std::string, WStationData> aggregate;
-    size_t i = 0;
+    long long i = 0;
     for (auto& outerPair : map) {
         for (auto& innerPair : outerPair.second) {
-            aggregate[innerPair.first].update(innerPair.second);
+            i += innerPair.second.count;
+            aggregate[innerPair.first].aggregate(innerPair.second);
         }
     }
     std::stringstream output;
@@ -120,13 +138,21 @@ void DataProcessor::aggregateAndOutput()
             << "{"
             << pair.first
             << "=" << static_cast<double>(pair.second.min) / 10
-            << "/" << std::fixed << std::setprecision(1) 
+            << "/" << std::fixed << std::setprecision(1)
             << (static_cast<double>((pair.second.sum) / 10) / pair.second.count)
             << "/" << static_cast<double>(pair.second.max) / 10
-            << "}"
-            << std::endl;
+            << ",";
+            //<< std::endl;
     }
-    std::cout << output.str() << std::endl;
+    output << "}" << std::endl;
+    const std::string long_string = output.str(); // Your very long string
+    const char* cstr = long_string.c_str(); // Get null-terminated character array
+    //size_t bytes_written = _write(1, cstr, long_string.length());
+    //if (bytes_written == -1) {
+    //    perror("write");
+    //}
+    //std::cout << output.str() << std::endl;
+    std::cout << i << " counted ";
 }
 
 

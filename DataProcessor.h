@@ -12,7 +12,9 @@
 #include <sstream>
 #include <windows.h>
 #include <iomanip>
-
+#include <cstring>
+#include <io.h>
+#include "SimpleHash.h"
 class DataProcessor
 {
 private:
