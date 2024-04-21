@@ -56,18 +56,16 @@ void DataProcessor::process()
     std::vector<char> overflow;
     for (size_t offset = 0; offset < fileSize; offset += chunkSize) {
   
-        size_t chunkToRead = offset + chunkSize < fileSize  ? chunkSize : fileSize - offset;
-        LPVOID chunkData = MapViewOfFile(hMapping, FILE_MAP_READ, 0, offset, chunkToRead);
+        size_t readSize = offset + chunkSize < fileSize  ? chunkSize : fileSize - offset;
+        LPVOID chunkData = MapViewOfFile(hMapping, FILE_MAP_READ, 0, offset, readSize);
         //std::cout << chunkToRead << std::endl;
         if (chunkData == nullptr) {
-            std::cout << offset << std::endl;
-            std::cerr << "Error mapping view of file" << std::endl;
             DWORD err = GetLastError();
             std::cerr << err << std::endl;
             break;
         }
-        buffer = std::vector<char>(chunkToRead + overflow.size());
-        std::memcpy(buffer.data(), chunkData, chunkToRead);
+        buffer = std::vector<char>(readSize + overflow.size());
+        std::memcpy(buffer.data(), chunkData, readSize);
         buffer.insert(buffer.begin(), overflow.begin(), overflow.end());
         size_t rf = findLastNewLine(buffer);
         overflow = std::vector<char>(buffer.begin() + rf + 1, buffer.end());
@@ -128,7 +126,7 @@ void DataProcessor::aggregateAndOutput()
     long long i = 0;
     for (auto& outerPair : map) {
         for (auto& innerPair : outerPair.second) {
-            i += innerPair.second.count;
+            //i += innerPair.second.count;
             aggregate[innerPair.first].aggregate(innerPair.second);
         }
     }
@@ -152,7 +150,7 @@ void DataProcessor::aggregateAndOutput()
     //    perror("write");
     //}
     //std::cout << output.str() << std::endl;
-    std::cout << i << " counted ";
+    //std::cout << i << " counted ";
 }
 
 

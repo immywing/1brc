@@ -52,6 +52,7 @@ void ThreadPool::enqueue(std::vector<char>&& task)
 
 void ThreadPool::processChunk(std::vector<char>&& chunk, size_t& threadId) 
 {
+    std::cout << "thread " << threadId << "started working!" << std::endl;
     int value = 0;
     bool negativeValue = false;
     std::string station;
