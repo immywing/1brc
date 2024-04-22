@@ -34,7 +34,7 @@ public:
         std::unordered_map<size_t, std::unordered_map<std::string, WStationData>>& map
     );
     ~ThreadPool();
-    void enqueue(std::vector<char>&& task);
+    void enqueue(std::vector<char>& task);
 };
 
 #endif // !THREAD_POOL_H

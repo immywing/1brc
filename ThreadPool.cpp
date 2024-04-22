@@ -43,11 +43,12 @@ ThreadPool::~ThreadPool()
     }
 }
 
-void ThreadPool::enqueue(std::vector<char>&& task)
+void ThreadPool::enqueue(std::vector<char>& task)
 {
-    //std::unique_lock<std::mutex> lock(mtx);
-    tasks.push(std::move(task));
+    int x = 10;
+    tasks.push(task);
     condition.notify_one();
+    int y = x <<1;
 }
 
 void ThreadPool::processChunk(std::vector<char>&& chunk, size_t& threadId) 

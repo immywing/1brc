@@ -51,9 +51,10 @@ void DataProcessor::process()
         CloseHandle(hFile);
     }
 
-    size_t chunkSize = (fileSize / nThreads) & ~(allocationGranularity - 1);
-    std::vector<char> buffer;
+    const size_t chunkSize = (fileSize / nThreads) & ~(allocationGranularity - 1);
+    std::vector<char> buffer(chunkSize);
     std::vector<char> overflow;
+
     for (size_t offset = 0; offset < fileSize; offset += chunkSize) {
   
         size_t readSize = offset + chunkSize < fileSize  ? chunkSize : fileSize - offset;
@@ -64,13 +65,14 @@ void DataProcessor::process()
             std::cerr << err << std::endl;
             break;
         }
-        buffer = std::vector<char>(readSize + overflow.size());
-        std::memcpy(buffer.data(), chunkData, readSize);
-        buffer.insert(buffer.begin(), overflow.begin(), overflow.end());
+        
+        buffer.resize(readSize + overflow.size());
+        std::copy(overflow.begin(), overflow.end(), buffer.data());
+        std::memcpy(buffer.data() + overflow.size(), chunkData, readSize);
         size_t rf = findLastNewLine(buffer);
         overflow = std::vector<char>(buffer.begin() + rf + 1, buffer.end());
         buffer.erase(buffer.begin() + rf + 1, buffer.end());
-        threadPool->enqueue(std::move(buffer));
+        threadPool->enqueue(buffer);
         // Unmap the view when done with the chunk
         UnmapViewOfFile(chunkData);
     }
@@ -112,12 +114,13 @@ void DataProcessor::process()
 
 size_t DataProcessor::findLastNewLine(std::vector<char>& vec)
 {
-    for (size_t i = vec.size() -1; i > 0; --i) {
-        if (vec[i] == '\n') {
-            return i;
-        }
+    auto it = std::find(vec.rbegin(), vec.rend(), '\n');
+    if (it == vec.rend()) {
+        return std::string::npos;
     }
-    return std::string::npos;
+    // Calculate index directly from the iterator
+    //return (vec.size() - 1) - std::distance(vec.rbegin(), it);
+    return std::distance(it, vec.rend()) - 1;
 }
 
 void DataProcessor::aggregateAndOutput() 

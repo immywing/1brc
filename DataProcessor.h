@@ -14,7 +14,7 @@
 #include <iomanip>
 #include <cstring>
 #include <io.h>
-#include "SimpleHash.h"
+//#include <algorithm>
 class DataProcessor
 {
 private:
