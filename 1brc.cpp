@@ -1,5 +1,4 @@
 // 1brc.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
 
 #include <iostream>
 #include "DataProcessor.h"
@@ -7,7 +6,7 @@
 #include <vector>
 
 static void run() {
-    std::unique_ptr<DataProcessor> dataProcessor = std::make_unique<DataProcessor>(L"c-measurements.txt", std::thread::hardware_concurrency() -1);
+    std::unique_ptr<DataProcessor> dataProcessor = std::make_unique<DataProcessor>(L"c-measurements.txt", std::thread::hardware_concurrency());
     dataProcessor->process();
     dataProcessor->aggregateAndOutput();
 }

@@ -54,7 +54,7 @@ void DataProcessor::process()
     const size_t chunkSize = (fileSize / nThreads) & ~(allocationGranularity - 1);
     std::vector<char> buffer(chunkSize);
     std::vector<char> overflow;
-
+    auto start = std::chrono::high_resolution_clock::now();
     for (size_t offset = 0; offset < fileSize; offset += chunkSize) {
   
         size_t readSize = offset + chunkSize < fileSize  ? chunkSize : fileSize - offset;
@@ -76,6 +76,8 @@ void DataProcessor::process()
         // Unmap the view when done with the chunk
         UnmapViewOfFile(chunkData);
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms to get and send all chunks" << std::endl;
     while (!threadPool->tasks.empty()) {  }
     // Close the mapping object and file handle
     CloseHandle(hMapping);
@@ -129,14 +131,14 @@ void DataProcessor::aggregateAndOutput()
     long long i = 0;
     for (auto& outerPair : map) {
         for (auto& innerPair : outerPair.second) {
-            //i += innerPair.second.count;
+            i += innerPair.second.count;
             aggregate[innerPair.first].aggregate(innerPair.second);
         }
     }
     std::stringstream output;
+    output << "{";
     for (auto& pair : aggregate) {
         output
-            << "{"
             << pair.first
             << "=" << static_cast<double>(pair.second.min) / 10
             << "/" << std::fixed << std::setprecision(1)
@@ -148,12 +150,12 @@ void DataProcessor::aggregateAndOutput()
     output << "}" << std::endl;
     const std::string long_string = output.str(); // Your very long string
     const char* cstr = long_string.c_str(); // Get null-terminated character array
-    //size_t bytes_written = _write(1, cstr, long_string.length());
-    //if (bytes_written == -1) {
-    //    perror("write");
-    //}
-    //std::cout << output.str() << std::endl;
-    //std::cout << i << " counted ";
+    size_t bytes_written = _write(1, cstr, long_string.length());
+    if (bytes_written == -1) {
+        perror("write");
+    }
+    std::cout << output.str() << std::endl;
+    std::cout << i << " counted ";
 }
 
 
