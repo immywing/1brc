@@ -13,6 +13,17 @@ ThreadPool::ThreadPool(
         DWORD err = GetLastError();
         std::cerr << err << std::endl;
     }
+    //long long i = 0;
+    //long long x = 0;
+    //while (i < fileSize)
+    //{
+    //    if (mappedFile[i] == '\n')
+    //    {
+    //        x++;
+    //    }
+    //    i++;
+    //}
+    //std::cout << "counted " << x << " newline chars" << std::endl;
     // Create worker threads
     for (size_t i = 0; i < num_threads; ++i) {
         workers.emplace_back(
@@ -41,6 +52,7 @@ ThreadPool::ThreadPool(
 
 ThreadPool::~ThreadPool()
 {
+    
     {
         std::unique_lock<std::mutex> lock(mtx);
         stop = true;
@@ -49,6 +61,7 @@ ThreadPool::~ThreadPool()
     for (auto& thread : workers) {
         thread.join();
     }
+    std::cout << x << std::endl;
 }
 
 void ThreadPool::enqueue(size_t offset, size_t readSize)
@@ -99,7 +112,7 @@ void ThreadPool::processChunk(size_t& offset, size_t& readSize, size_t& threadId
         len++;
         x++;
     }
-    std::cout << "thread " << threadId << " finished" << std::endl;
+    //std::cout << "thread " << threadId << " finished" << std::endl;
 }
 
 int ThreadPool::floatParse(const char& v, int multiplier)

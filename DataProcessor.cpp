@@ -54,6 +54,8 @@ void DataProcessor::process()
         DWORD err = GetLastError();
         std::cerr << err << std::endl;
     }
+
+    /*std::cout << "counted " << x << " newline chars" << std::endl;*/
     std::cout << "can map view of whole file" << std::endl;
     const size_t chunkSize = (fileSize / nThreads) & ~(allocationGranularity - 1);
     std::unique_ptr<ThreadPool> threadPool = std::make_unique<ThreadPool>(nThreads, hMapping, fileSize, map);
