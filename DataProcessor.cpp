@@ -19,7 +19,7 @@ void DataProcessor::process()
         systemInfo.dwPageSize > systemInfo.dwAllocationGranularity ? 
         systemInfo.dwPageSize : systemInfo.dwAllocationGranularity;
 
-    std::unique_ptr<ThreadPool> threadPool = std::make_unique<ThreadPool>(nThreads, map);
+    
 
     HANDLE hFile = CreateFile(
         fpath.c_str(),
@@ -52,37 +52,30 @@ void DataProcessor::process()
     }
 
     const size_t chunkSize = (fileSize / nThreads) & ~(allocationGranularity - 1);
+    std::unique_ptr<ThreadPool> threadPool = std::make_unique<ThreadPool>(nThreads, map);
+
     std::vector<char> buffer(chunkSize);
     std::vector<char> overflow;
-
     auto start = std::chrono::high_resolution_clock::now();
+    size_t chunkId = 0;
     for (size_t offset = 0; offset < fileSize; offset += chunkSize) {
-  
         size_t readSize = offset + chunkSize < fileSize  ? chunkSize : fileSize - offset;
         LPVOID chunkData = MapViewOfFile(hMapping, FILE_MAP_READ, 0, offset, readSize);
-        //std::cout << chunkToRead << std::endl;
         if (chunkData == nullptr) {
             DWORD err = GetLastError();
             std::cerr << err << std::endl;
             break;
         }
-        
-        buffer.resize(readSize + overflow.size());
-        std::copy(overflow.begin(), overflow.end(), buffer.data());
-        std::memcpy(buffer.data() + overflow.size(), chunkData, readSize);
-        size_t rf = findLastNewLine(buffer);
-        overflow = std::vector<char>(buffer.begin() + rf + 1, buffer.end());
-        buffer.erase(buffer.begin() + rf + 1, buffer.end());
-        threadPool->enqueue(buffer);
-        // Unmap the view when done with the chunk
-        UnmapViewOfFile(chunkData);
+        threadPool->enqueue(chunkData, readSize, chunkId);
+        chunkId++;
+        //UnmapViewOfFile(chunkData);
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms to get and send all chunks" << std::endl;
     while (!threadPool->tasks.empty()) {  }
     // Close the mapping object and file handle
     CloseHandle(hMapping);
     CloseHandle(hFile);
-    auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "generating chunks to queue in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds" << std::endl;
 }
 
 size_t DataProcessor::findLastNewLine(std::vector<char>& vec)
@@ -102,14 +95,14 @@ void DataProcessor::aggregateAndOutput()
     long long i = 0;
     for (auto& outerPair : map) {
         for (auto& innerPair : outerPair.second) {
-            //i += innerPair.second.count;
+            i += innerPair.second.count;
             aggregate[innerPair.first].aggregate(innerPair.second);
         }
     }
     std::stringstream output;
+    output << "{";
     for (auto& pair : aggregate) {
         output
-            << "{"
             << pair.first
             << "=" << static_cast<double>(pair.second.min) / 10
             << "/" << std::fixed << std::setprecision(1)
@@ -121,12 +114,12 @@ void DataProcessor::aggregateAndOutput()
     output << "}" << std::endl;
     const std::string long_string = output.str(); // Your very long string
     const char* cstr = long_string.c_str(); // Get null-terminated character array
-    //size_t bytes_written = _write(1, cstr, long_string.length());
-    //if (bytes_written == -1) {
-    //    perror("write");
-    //}
-    //std::cout << output.str() << std::endl;
-    //std::cout << i << " counted ";
+    size_t bytes_written = _write(1, cstr, long_string.length());
+    if (bytes_written == -1) {
+        perror("write");
+    }
+    std::cout << output.str() << std::endl;
+    std::cout << i << " counted ";
 }
 
 
