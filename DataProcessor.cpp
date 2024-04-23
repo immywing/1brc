@@ -55,6 +55,7 @@ void DataProcessor::process()
     std::vector<char> buffer(chunkSize);
     std::vector<char> overflow;
 
+    auto start = std::chrono::high_resolution_clock::now();
     for (size_t offset = 0; offset < fileSize; offset += chunkSize) {
   
         size_t readSize = offset + chunkSize < fileSize  ? chunkSize : fileSize - offset;
@@ -80,36 +81,8 @@ void DataProcessor::process()
     // Close the mapping object and file handle
     CloseHandle(hMapping);
     CloseHandle(hFile);
-
-    //std::ifstream file(fpath);
-    //if (!file.is_open()) {
-    //    std::cerr << "Error opening file" << std::endl;
-    //}
-    //
-    //file.seekg(0, std::ios::end);
-    //size_t fileSize = file.tellg();
-    //file.seekg(0);
-    //std::cout << fileSize << std::endl;
-    //size_t chunkSize = fileSize / nThreads;//1024 * 100000; //fileSize / nThreads; //
-    ////std::cout << chunkSize << std::endl;
-    //std::vector<char> overflow;
-    //size_t bytes_read = 1;
-    //while (bytes_read > 0) {
-    //    std::vector<char> buffer(chunkSize);
-    //    file.read(buffer.data(), chunkSize);
-    //    bytes_read = file.gcount();
-    //    if (bytes_read == 0) { break; }
-    //    buffer.resize(bytes_read);
-    //    buffer.insert(buffer.begin(), overflow.begin(), overflow.end());
-    //    size_t rf = findLastNewLine(buffer);
-    //    overflow = std::vector<char>(buffer.begin() + rf + 1, buffer.end());
-    //    buffer.erase(buffer.begin() + rf + 1, buffer.end());
-    //    _threadPool->enqueue(std::move(buffer));
-    //}
-    //auto end = std::chrono::high_resolution_clock::now();
-    //auto duration_seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-    //std::cout << "\tdone reading chunks in " << duration_seconds.count() << " seconds" << std::endl;
-    //file.close();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "generating chunks to queue in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds" << std::endl;
 }
 
 size_t DataProcessor::findLastNewLine(std::vector<char>& vec)

@@ -2,12 +2,12 @@
 #include <iostream>
 ThreadPool::ThreadPool(
     size_t& num_threads,
+    //HashTable& map
     std::unordered_map<size_t, std::unordered_map<std::string, WStationData>>& map
 ) : stop(false), map(map)
 {
     // Create worker threads
     for (size_t i = 0; i < num_threads; ++i) {
-        //map[i];
         workers.emplace_back(
             [this, i] {
                 size_t threadId = i;
@@ -21,10 +21,10 @@ ThreadPool::ThreadPool(
                         if (stop && tasks.empty()) {
                             return; // Exit the thread when stopping and no tasks left
                         }
-                        task = std::move(tasks.front());
+                        task = tasks.front();
                         tasks.pop();
                     }
-                    processChunk(std::move(task), threadId);
+                    processChunk(task, threadId);
                 }
             }
         );
@@ -45,15 +45,13 @@ ThreadPool::~ThreadPool()
 
 void ThreadPool::enqueue(std::vector<char>& task)
 {
-    int x = 10;
     tasks.push(task);
     condition.notify_one();
-    int y = x <<1;
 }
 
-void ThreadPool::processChunk(std::vector<char>&& chunk, size_t& threadId) 
+void ThreadPool::processChunk(std::vector<char>& chunk, size_t& threadId) 
 {
-    std::cout << "thread " << threadId << "started working!" << std::endl;
+    //std::cout << "thread " << threadId << "started working!" << std::endl;
     int value = 0;
     bool negativeValue = false;
     std::string station;
@@ -66,6 +64,7 @@ void ThreadPool::processChunk(std::vector<char>&& chunk, size_t& threadId)
         c = chunk.at(len);
         while (c!= semicolon) {
             *inserter = c;
+            hash = (hash * 31) + c;
             ++len;
             c = chunk.at(len);
         }

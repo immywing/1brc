@@ -14,13 +14,14 @@
 #include <iomanip>
 #include <cstring>
 #include <io.h>
-//#include <algorithm>
+#include "HashTable.h"
 class DataProcessor
 {
 private:
 	std::wstring fpath;
 	size_t nThreads;
 	std::unordered_map<size_t, std::unordered_map<std::string, WStationData>> map;
+	//HashTable map;
 	size_t findLastNewLine(std::vector<char>& vec);
 public:
 	std::vector<std::thread> threads;

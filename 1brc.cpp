@@ -7,9 +7,9 @@
 #include <vector>
 
 static void run() {
-    std::unique_ptr<DataProcessor> dataProcessor = std::make_unique<DataProcessor>(L"c-measurements.txt", std::thread::hardware_concurrency() -1);
+    std::unique_ptr<DataProcessor> dataProcessor = std::make_unique<DataProcessor>(L"c-measurements.txt", std::thread::hardware_concurrency());
     dataProcessor->process();
-    dataProcessor->aggregateAndOutput();
+    //dataProcessor->aggregateAndOutput();
 }
 
 int main()
