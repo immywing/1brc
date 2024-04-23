@@ -10,33 +10,35 @@
 #include <fstream>
 #include <unordered_map>
 #include "WStationData.h"
-#include "HashTable.h"
-#include "SimpleHash.h"
-#include "Windows.h"
 #include <tuple>
+#include <memory>
+#include <Windows.h>
+
 class ThreadPool {
 private:
+    long long x = 0;
     std::vector<std::thread> workers;
     std::mutex mtx;
     std::condition_variable condition;
     std::unordered_map<size_t, std::unordered_map<std::string, WStationData>>& map;
-    std::unordered_map<size_t, std::vector<char>> overflowMap;
+    char* mappedFile;
     bool stop;
     const char semicolon = ';';
     const char newline = '\n';
     const char dot = '.';
     const char negative = '-';
     int floatParse(const char& v, int multiplier);
-    void processChunk(LPVOID& chunkData, size_t& readSize, size_t& chunkNumber, size_t& threadId);
+    void processChunk(size_t& offset, size_t& readSize, size_t& threadId);
 public:
-    std::queue<std::tuple<LPVOID, size_t, size_t>> tasks;
+    std::queue<std::tuple<size_t, size_t>> tasks;
     ThreadPool(
         size_t& num_threads,
-        //HashTable& map
+        HANDLE& hMapping,
+        uint64_t& fileSize,
         std::unordered_map<size_t, std::unordered_map<std::string, WStationData>>& map
     );
     ~ThreadPool();
-    void enqueue(LPVOID& chunkData, size_t& readSize, size_t& chunkNumber);
+    void enqueue(size_t offset, size_t readSize);
 };
 
 #endif // !THREAD_POOL_H

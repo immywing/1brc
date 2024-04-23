@@ -19,8 +19,6 @@ void DataProcessor::process()
         systemInfo.dwPageSize > systemInfo.dwAllocationGranularity ? 
         systemInfo.dwPageSize : systemInfo.dwAllocationGranularity;
 
-    
-
     HANDLE hFile = CreateFile(
         fpath.c_str(),
         GENERIC_READ,
@@ -51,24 +49,33 @@ void DataProcessor::process()
         CloseHandle(hFile);
     }
 
+    char* mappedPtr = reinterpret_cast<char*>(MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, fileSize));
+    if (mappedPtr == nullptr) {
+        DWORD err = GetLastError();
+        std::cerr << err << std::endl;
+    }
+    std::cout << "can map view of whole file" << std::endl;
     const size_t chunkSize = (fileSize / nThreads) & ~(allocationGranularity - 1);
-    std::unique_ptr<ThreadPool> threadPool = std::make_unique<ThreadPool>(nThreads, map);
+    std::unique_ptr<ThreadPool> threadPool = std::make_unique<ThreadPool>(nThreads, hMapping, fileSize, map);
 
     std::vector<char> buffer(chunkSize);
     std::vector<char> overflow;
     auto start = std::chrono::high_resolution_clock::now();
     size_t chunkId = 0;
-    for (size_t offset = 0; offset < fileSize; offset += chunkSize) {
-        size_t readSize = offset + chunkSize < fileSize  ? chunkSize : fileSize - offset;
-        LPVOID chunkData = MapViewOfFile(hMapping, FILE_MAP_READ, 0, offset, readSize);
-        if (chunkData == nullptr) {
-            DWORD err = GetLastError();
-            std::cerr << err << std::endl;
-            break;
+    for (size_t offset = 0; offset < fileSize; offset += chunkSize) 
+    {        
+        size_t readSize = offset + chunkSize < fileSize ? chunkSize : fileSize - offset;
+        size_t overflow = offset + readSize;
+
+        while (mappedPtr[overflow] != '\n' && overflow < fileSize)
+        {
+            overflow++;
         }
-        threadPool->enqueue(chunkData, readSize, chunkId);
-        chunkId++;
-        //UnmapViewOfFile(chunkData);
+        overflow++;
+        overflow = overflow - (offset + readSize);
+        offset += overflow;
+        threadPool->enqueue(offset, readSize + overflow);
+        
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms to get and send all chunks" << std::endl;

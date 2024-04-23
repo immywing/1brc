@@ -1,42 +1,25 @@
 #include "ThreadPool.h"
 #include <iostream>
-size_t findLastNewLine(std::vector<char>& vec)
-{
-    for (size_t i = vec.size() - 1; i > 0; --i)
-    {
-        if (vec[i] == '\n')
-        {
-            return i;
-        }
-    }
-    return std::string::npos;
-}
-
-size_t findFirstNewLine(std::vector<char>& vec)
-{
-    for (size_t i = 0; i < vec.size(); ++i)
-    {
-        if (vec[i] == '\n')
-        {
-            return i;
-        }
-    }
-    return std::string::npos;
-}
 
 ThreadPool::ThreadPool(
     size_t& num_threads,
-    //HashTable& map
+    HANDLE& hMapping,
+    uint64_t& fileSize,
     std::unordered_map<size_t, std::unordered_map<std::string, WStationData>>& map
 ) : stop(false), map(map)
 {
+    mappedFile = reinterpret_cast<char*>(MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, fileSize));
+    if (mappedFile == nullptr) {
+        DWORD err = GetLastError();
+        std::cerr << err << std::endl;
+    }
     // Create worker threads
     for (size_t i = 0; i < num_threads; ++i) {
         workers.emplace_back(
             [this, i] {
                 size_t threadId = i;
                 while (true) {
-                    std::tuple<LPVOID, size_t, size_t> task;
+                    std::tuple<size_t, size_t> task;
                     {
                         std::unique_lock<std::mutex> lock(mtx);
                         while (tasks.empty() && !stop) {
@@ -48,15 +31,15 @@ ThreadPool::ThreadPool(
                         task = tasks.front();
                         tasks.pop();
                     }
-                    
-                    processChunk(std::get<0>(task), std::get<1>(task), std::get<2>(task), threadId);
+
+                    processChunk(std::get<0>(task), std::get<1>(task), threadId);
                 }
             }
         );
     }
 }
 
-ThreadPool::~ThreadPool() 
+ThreadPool::~ThreadPool()
 {
     {
         std::unique_lock<std::mutex> lock(mtx);
@@ -68,57 +51,34 @@ ThreadPool::~ThreadPool()
     }
 }
 
-void ThreadPool::enqueue(LPVOID& chunkData, size_t& readSize, size_t& chunkNumber)
+void ThreadPool::enqueue(size_t offset, size_t readSize)
 {
-    int x = 10;
-    tasks.push({ chunkData , readSize, chunkNumber });
+    tasks.push(std::tuple(offset, readSize));
     condition.notify_one();
 }
 
-void ThreadPool::processChunk(LPVOID& chunkData, size_t& readSize, size_t& chunkNumber, size_t& threadId)
+void ThreadPool::processChunk(size_t& offset, size_t& readSize, size_t& threadId)
 {
-    std::vector<char> overflow;
-    //if (chunkNumber > 0)
-    //{
-    //    while (overflowMap.count(chunkNumber - 1) == 0) {}
-    //    overflow = overflowMap.at(chunkNumber - 1);
-    //}
-
-    std::vector<char> buffer(readSize + overflow.size());
-
-    //std::copy(overflow.begin(), overflow.end(), buffer.data());
-    std::memcpy(buffer.data() + overflow.size(), chunkData, readSize);
-    UnmapViewOfFile(chunkData);
-
-    size_t firstNewLine = findFirstNewLine(buffer);
-    size_t lastNewLine  = findLastNewLine(buffer);
-    //if (lastNewLine != std::string::npos) {
-        overflow = std::vector<char>(buffer.begin() + lastNewLine + 1, buffer.end());
-    //}
-    overflowMap[chunkNumber] = overflow;
-    //buffer.erase(buffer.begin() + lastNewLine + 1, buffer.end());
-    //buffer.erase(buffer.begin(), buffer.begin() + firstNewLine + 1);
-    //std::cout << "thread " << threadId << " got chunk to buffer!" << std::endl;
     int value = 0;
     bool negativeValue = false;
     std::string station;
     auto inserter = std::back_inserter<std::string>(station);
     char c;
     int multiplier = 100;
-    size_t len = firstNewLine + 1;
-    while (len < lastNewLine +1) {
-        c = buffer.at(len);
-        while (c!= semicolon) {
+    size_t len = offset;
+    while (len < readSize) {
+        c = mappedFile[len];
+        while (c != semicolon) {
             *inserter = c;
             ++len;
-            c = buffer.at(len);
+            c = mappedFile[len];
         }
         len++;
-        c = buffer.at(len);
+        c = mappedFile[len];
         if (c == negative) {
-            negativeValue = true; 
+            negativeValue = true;
             len++;
-            c = buffer.at(len);
+            c = mappedFile[len];
         }
         while (c != newline) {
             if (c != dot) {
@@ -126,7 +86,7 @@ void ThreadPool::processChunk(LPVOID& chunkData, size_t& readSize, size_t& chunk
                 multiplier /= 10;
             }
             len++;
-            c = buffer.at(len);
+            c = mappedFile[len];
         }
         if (negativeValue) {
             value *= -1;
@@ -137,11 +97,12 @@ void ThreadPool::processChunk(LPVOID& chunkData, size_t& readSize, size_t& chunk
         multiplier = 100;
         station.clear();
         len++;
+        x++;
     }
-    //std::cout << "thread " << threadId << " finished!" << std::endl;
+    std::cout << "thread " << threadId << " finished" << std::endl;
 }
 
-int ThreadPool::floatParse(const char& v, int multiplier) 
+int ThreadPool::floatParse(const char& v, int multiplier)
 {
     return (v - 48) * multiplier;
 }
