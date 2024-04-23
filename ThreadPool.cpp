@@ -2,13 +2,26 @@
 #include <iostream>
 size_t findLastNewLine(std::vector<char>& vec)
 {
-    auto it = std::find(vec.rbegin(), vec.rend(), '\n');
-    if (it == vec.rend()) {
-        return std::string::npos;
+    for (size_t i = vec.size() - 1; i > 0; --i)
+    {
+        if (vec[i] == '\n')
+        {
+            return i;
+        }
     }
-    // Calculate index directly from the iterator
-    //return (vec.size() - 1) - std::distance(vec.rbegin(), it);
-    return std::distance(it, vec.rend()) - 1;
+    return std::string::npos;
+}
+
+size_t findFirstNewLine(std::vector<char>& vec)
+{
+    for (size_t i = 0; i < vec.size(); ++i)
+    {
+        if (vec[i] == '\n')
+        {
+            return i;
+        }
+    }
+    return std::string::npos;
 }
 
 ThreadPool::ThreadPool(
@@ -65,35 +78,38 @@ void ThreadPool::enqueue(LPVOID& chunkData, size_t& readSize, size_t& chunkNumbe
 void ThreadPool::processChunk(LPVOID& chunkData, size_t& readSize, size_t& chunkNumber, size_t& threadId)
 {
     std::vector<char> overflow;
-    if (chunkNumber > 0)
-    {
-        while (overflowMap.count(chunkNumber - 1) == 0) {}
-        overflow = overflowMap.at(chunkNumber - 1);
-    }
+    //if (chunkNumber > 0)
+    //{
+    //    while (overflowMap.count(chunkNumber - 1) == 0) {}
+    //    overflow = overflowMap.at(chunkNumber - 1);
+    //}
 
     std::vector<char> buffer(readSize + overflow.size());
 
-    std::copy(overflow.begin(), overflow.end(), buffer.data());
+    //std::copy(overflow.begin(), overflow.end(), buffer.data());
     std::memcpy(buffer.data() + overflow.size(), chunkData, readSize);
     UnmapViewOfFile(chunkData);
-    auto it = std::find(buffer.rbegin(), buffer.rend(), '\n');
-    size_t rf = std::distance(it, buffer.rend()) - 1;
-    overflow = std::vector<char>(buffer.begin() + rf + 1, buffer.end());
+
+    size_t firstNewLine = findFirstNewLine(buffer);
+    size_t lastNewLine  = findLastNewLine(buffer);
+    //if (lastNewLine != std::string::npos) {
+        overflow = std::vector<char>(buffer.begin() + lastNewLine + 1, buffer.end());
+    //}
     overflowMap[chunkNumber] = overflow;
-    //buffer.erase(buffer.begin() + rf + 1, buffer.end());
-    std::cout << "thread " << threadId << "got chunk to buffer!" << std::endl;
+    //buffer.erase(buffer.begin() + lastNewLine + 1, buffer.end());
+    //buffer.erase(buffer.begin(), buffer.begin() + firstNewLine + 1);
+    //std::cout << "thread " << threadId << " got chunk to buffer!" << std::endl;
     int value = 0;
     bool negativeValue = false;
     std::string station;
     auto inserter = std::back_inserter<std::string>(station);
     char c;
     int multiplier = 100;
-    size_t len = 0;
-    while (len < rf + 1) {
+    size_t len = firstNewLine + 1;
+    while (len < lastNewLine +1) {
         c = buffer.at(len);
         while (c!= semicolon) {
             *inserter = c;
-            hash = (hash * 31) + c;
             ++len;
             c = buffer.at(len);
         }
@@ -122,6 +138,7 @@ void ThreadPool::processChunk(LPVOID& chunkData, size_t& readSize, size_t& chunk
         station.clear();
         len++;
     }
+    //std::cout << "thread " << threadId << " finished!" << std::endl;
 }
 
 int ThreadPool::floatParse(const char& v, int multiplier) 

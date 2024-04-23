@@ -84,8 +84,6 @@ size_t DataProcessor::findLastNewLine(std::vector<char>& vec)
     if (it == vec.rend()) {
         return std::string::npos;
     }
-    // Calculate index directly from the iterator
-    //return (vec.size() - 1) - std::distance(vec.rbegin(), it);
     return std::distance(it, vec.rend()) - 1;
 }
 
@@ -118,7 +116,7 @@ void DataProcessor::aggregateAndOutput()
     if (bytes_written == -1) {
         perror("write");
     }
-    std::cout << output.str() << std::endl;
+    //std::cout << output.str() << std::endl;
     std::cout << i << " counted ";
 }
 
