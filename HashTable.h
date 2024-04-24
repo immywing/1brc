@@ -14,7 +14,7 @@ struct Node
 class HashTable 
 {
 private:
-    const size_t M = 10007; //65536;
+    const size_t M = 65536;
     std::vector<std::shared_ptr<Node>> table;
 public:
     HashTable();

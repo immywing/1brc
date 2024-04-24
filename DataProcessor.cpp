@@ -12,12 +12,12 @@ DataProcessor::DataProcessor(std::wstring fpath, size_t nThreads) :
 
 void DataProcessor::process() 
 {
-    SYSTEM_INFO systemInfo;
-    GetSystemInfo(&systemInfo);
+    //SYSTEM_INFO systemInfo;
+    //GetSystemInfo(&systemInfo);
 
-    SIZE_T allocationGranularity =
-        systemInfo.dwPageSize > systemInfo.dwAllocationGranularity ? 
-        systemInfo.dwPageSize : systemInfo.dwAllocationGranularity;
+    //SIZE_T allocationGranularity =
+    //    systemInfo.dwPageSize > systemInfo.dwAllocationGranularity ? 
+    //    systemInfo.dwPageSize : systemInfo.dwAllocationGranularity;
 
     HANDLE hFile = CreateFile(
         fpath.c_str(),
@@ -47,13 +47,13 @@ void DataProcessor::process()
         CloseHandle(hFile);
     }
 
-    char* mappedPtr = reinterpret_cast<char*>(MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, fileSize));
+    unsigned char* mappedPtr = reinterpret_cast<unsigned char*>(MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, fileSize));
     if (mappedPtr == nullptr) {
         DWORD err = GetLastError();
         std::cerr << err << std::endl;
     }
 
-    const size_t chunkSize = (fileSize / nThreads) & ~(allocationGranularity - 1);
+    const size_t chunkSize = (fileSize / nThreads);
 
     size_t threadId = 0;
     for (size_t offset = 0; offset < fileSize; offset += chunkSize) 
@@ -74,7 +74,7 @@ void DataProcessor::process()
         workers.emplace_back(
             [this, mappedPtr, offset, readSize, overflow, threadId]
             {
-                size_t offset_ = offset;
+                size_t offset_   = offset;
                 size_t readSize_ = readSize + offset;
                 size_t threadId_ = threadId;
                 processChunk(mappedPtr, offset_, readSize_, threadId_);
@@ -97,13 +97,13 @@ int DataProcessor::floatParse(const char& v, int multiplier)
     return (v - 48) * multiplier;
 }
 
-void DataProcessor::processChunk(char* mappedFile, size_t& offset, size_t& readSize, size_t& threadId)
+void DataProcessor::processChunk(unsigned char* mappedFile, size_t& offset, size_t& readSize, size_t& threadId)
 {
     int value = 0;
     bool negativeValue = false;
     std::string station;
     auto inserter = std::back_inserter<std::string>(station);
-    char c;
+    unsigned char c;
     int multiplier = 100;
     size_t len = offset;
     size_t hash = 0;
@@ -111,7 +111,7 @@ void DataProcessor::processChunk(char* mappedFile, size_t& offset, size_t& readS
         c = mappedFile[len];
         while (c != ';') {
             *inserter = c;
-            //hash = (hash * 5381) + c;
+            hash = (hash * 31) + c;
             ++len;
             c = mappedFile[len];
         }
@@ -133,14 +133,14 @@ void DataProcessor::processChunk(char* mappedFile, size_t& offset, size_t& readS
         if (negativeValue) {
             value *= -1;
         }
-        //table[threadId].lookup_at(hash, station).update(value);
+        //table[threadId].lookup_at(hash, station).update(value)
         map[threadId][station].update(value);
         negativeValue = false;
         value = 0;
         multiplier = 100;
         station.clear();
         len++;
-        hash = 0;
+        //hash = 0;
     }
 }
 
@@ -148,15 +148,13 @@ void DataProcessor::aggregateAndOutput()
 {
     std::unordered_map<std::string, WStationData> aggregate;
     long long i = 0;
-    //for (auto& outerPair : map) {
-    //    for (auto& innerPair : outerPair.second) {
-    //        i += innerPair.second.count;
-    //        aggregate[innerPair.first].aggregate(innerPair.second);
-    //    }
-    //}
-    //for (auto& pair : table) {
-    //    i += pair.second.
-    //}
+    for (auto& outerPair : map) {
+        for (auto& innerPair : outerPair.second) {
+            i += innerPair.second.count;
+            aggregate[innerPair.first].aggregate(innerPair.second);
+        }
+    }
+
     std::stringstream output;
     output << "{";
     for (auto& pair : aggregate) {
@@ -170,8 +168,8 @@ void DataProcessor::aggregateAndOutput()
             //<< std::endl;
     }
     output << "}" << std::endl;
-    const std::string long_string = output.str(); // Your very long string
-    const char* cstr = long_string.c_str(); // Get null-terminated character array
+    const std::string long_string = output.str();
+    const char* cstr = long_string.c_str(); 
     size_t bytes_written = _write(1, cstr, long_string.length());
     if (bytes_written == -1) {
         perror("write");

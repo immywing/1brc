@@ -125,7 +125,9 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <EnableFiberSafeOptimizations>false</EnableFiberSafeOptimizations>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <OmitFramePointers>true</OmitFramePointers>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -138,15 +140,11 @@
     <ClCompile Include="1brc.cpp" />
     <ClCompile Include="HashTable.cpp" />
     <ClCompile Include="DataProcessor.cpp" />
-    <ClCompile Include="SimpleHash.cpp" />
-    <ClCompile Include="ThreadPool.cpp" />
     <ClCompile Include="WStationData.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HashTable.h" />
     <ClInclude Include="DataProcessor.h" />
-    <ClInclude Include="SimpleHash.h" />
-    <ClInclude Include="ThreadPool.h" />
     <ClInclude Include="WStationData.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
