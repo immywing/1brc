@@ -70,7 +70,7 @@ void DataProcessor::process()
             overflow++;
         }
         overflow = overflow - (offset + readSize);
-        offset += overflow;
+        
         workers.emplace_back(
             [this, mappedPtr, offset, readSize, overflow, threadId]
             {
@@ -80,6 +80,7 @@ void DataProcessor::process()
                 processChunk(mappedPtr, offset_, readSize_, threadId_);
             }
         );
+        offset += overflow;
         threadId++;
     }
 
@@ -92,7 +93,7 @@ void DataProcessor::process()
     CloseHandle(hFile);
 }
 
-int DataProcessor::floatParse(const char& v, int multiplier)
+int DataProcessor::floatParse(const unsigned char& v, int multiplier)
 {
     return (v - 48) * multiplier;
 }
@@ -105,6 +106,7 @@ void DataProcessor::processChunk(unsigned char* mappedFile, size_t& offset, size
     auto inserter = std::back_inserter<std::string>(station);
     unsigned char c;
     int multiplier = 100;
+    int mod = 1;
     size_t len = offset;
     size_t hash = 0;
     while (len < readSize) {
@@ -118,29 +120,42 @@ void DataProcessor::processChunk(unsigned char* mappedFile, size_t& offset, size
         len++;
         c = mappedFile[len];
         if (c == '-') {
+            mod = -1;
             negativeValue = true;
             len++;
             c = mappedFile[len];
         }
-        while (c != '\n') {
-            if (c != '.') {
-                value += floatParse(c, multiplier);
-                multiplier /= 10;
-            }
-            len++;
-            c = mappedFile[len];
+        else { mod = 1; }
+        if (mappedFile[len + 1] == '.') {
+            value += floatParse(c, 10);
+            value += (mappedFile[len + 2] - 48);
+            value *= mod;
         }
-        if (negativeValue) {
-            value *= -1;
+        else {
+            value += floatParse(c, 100);
+            value += floatParse(mappedFile[len + 1], 10);
+            value += (mappedFile[len + 3] - 48);
+            value *= mod;
         }
+        //while (c != '\n') {
+        //    if (c != '.') {
+        //        value += floatParse(c, multiplier);
+        //        multiplier /= 10;
+        //    }
+        //    len++;
+        //    c = mappedFile[len];
+        //}
+        //if (negativeValue) {
+        //    value *= -1;
+        //}
         //table[threadId].lookup_at(hash, station).update(value)
         map[threadId][station].update(value);
         negativeValue = false;
         value = 0;
         multiplier = 100;
         station.clear();
-        len++;
-        //hash = 0;
+        len+= 5;
+        if (mappedFile[len] == '\n') { len++; } // inconsistend '\r\n' pattern in file, OR I have a bug elsewhere
     }
 }
 
