@@ -3,7 +3,6 @@
 #include <vector>
 #include "WStationData.h"
 #include <memory>
-
 struct Node 
 {
     const std::string key;
@@ -15,11 +14,11 @@ struct Node
 class HashTable 
 {
 private:
-    const int M;
+    const size_t M = 10007; //65536;
     std::vector<std::shared_ptr<Node>> table;
 public:
-    HashTable(int M = 10007);
-    WStationData lookup_at(size_t hash_value, const std::string& key);
+    HashTable();
+    WStationData lookup_at(size_t& hash_value, const std::string& key);
 };
 #endif
 

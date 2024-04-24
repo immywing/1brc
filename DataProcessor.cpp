@@ -33,7 +33,6 @@ void DataProcessor::process()
         std::cerr << "Error opening file: " << std::endl;
     }
 
-    // Get file size
     LARGE_INTEGER size;
     GetFileSizeEx(hFile, &size);
     uint64_t fileSize = size.QuadPart;
@@ -42,7 +41,6 @@ void DataProcessor::process()
         CloseHandle(hFile);
     }
 
-    // Create a file mapping object
     HANDLE hMapping = CreateFileMapping(hFile, 0, PAGE_READONLY, 0, 0, 0);
     if (hMapping == nullptr) {
         std::cerr << "Error creating file mapping object" << std::endl;
@@ -54,7 +52,6 @@ void DataProcessor::process()
         DWORD err = GetLastError();
         std::cerr << err << std::endl;
     }
-    long long total = 0;
 
     const size_t chunkSize = (fileSize / nThreads) & ~(allocationGranularity - 1);
 
@@ -74,7 +71,6 @@ void DataProcessor::process()
         }
         overflow = overflow - (offset + readSize);
         offset += overflow;
-        total += readSize + overflow;
         workers.emplace_back(
             [this, mappedPtr, offset, readSize, overflow, threadId]
             {
@@ -91,6 +87,7 @@ void DataProcessor::process()
     {
         thread.join();
     }
+    UnmapViewOfFile(mappedPtr);
     CloseHandle(hMapping);
     CloseHandle(hFile);
 }
@@ -109,10 +106,12 @@ void DataProcessor::processChunk(char* mappedFile, size_t& offset, size_t& readS
     char c;
     int multiplier = 100;
     size_t len = offset;
+    size_t hash = 0;
     while (len < readSize) {
         c = mappedFile[len];
         while (c != ';') {
             *inserter = c;
+            //hash = (hash * 5381) + c;
             ++len;
             c = mappedFile[len];
         }
@@ -134,27 +133,30 @@ void DataProcessor::processChunk(char* mappedFile, size_t& offset, size_t& readS
         if (negativeValue) {
             value *= -1;
         }
+        //table[threadId].lookup_at(hash, station).update(value);
         map[threadId][station].update(value);
         negativeValue = false;
         value = 0;
         multiplier = 100;
         station.clear();
         len++;
+        hash = 0;
     }
-    //std::cout << "thread " << threadId << " finished" << std::endl;
-    //aggregateAndOutput();
 }
 
 void DataProcessor::aggregateAndOutput() 
 {
     std::unordered_map<std::string, WStationData> aggregate;
     long long i = 0;
-    for (auto& outerPair : map) {
-        for (auto& innerPair : outerPair.second) {
-            i += innerPair.second.count;
-            aggregate[innerPair.first].aggregate(innerPair.second);
-        }
-    }
+    //for (auto& outerPair : map) {
+    //    for (auto& innerPair : outerPair.second) {
+    //        i += innerPair.second.count;
+    //        aggregate[innerPair.first].aggregate(innerPair.second);
+    //    }
+    //}
+    //for (auto& pair : table) {
+    //    i += pair.second.
+    //}
     std::stringstream output;
     output << "{";
     for (auto& pair : aggregate) {
