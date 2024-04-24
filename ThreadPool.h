@@ -16,7 +16,7 @@
 
 class ThreadPool {
 private:
-    long long x = 0;
+    std::unordered_map<size_t, long long> x;
     std::vector<std::thread> workers;
     std::mutex mtx;
     std::condition_variable condition;
@@ -28,8 +28,10 @@ private:
     const char dot = '.';
     const char negative = '-';
     int floatParse(const char& v, int multiplier);
-    void processChunk(size_t& offset, size_t& readSize, size_t& threadId);
+    //void processChunk(size_t& offset, size_t& readSize, size_t& threadId);
 public:
+    int tasksIn  = 0;
+    int tasksOut = 0;
     std::queue<std::tuple<size_t, size_t>> tasks;
     ThreadPool(
         size_t& num_threads,

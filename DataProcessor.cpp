@@ -54,16 +54,11 @@ void DataProcessor::process()
         DWORD err = GetLastError();
         std::cerr << err << std::endl;
     }
+    long long total = 0;
 
-    /*std::cout << "counted " << x << " newline chars" << std::endl;*/
-    std::cout << "can map view of whole file" << std::endl;
     const size_t chunkSize = (fileSize / nThreads) & ~(allocationGranularity - 1);
-    std::unique_ptr<ThreadPool> threadPool = std::make_unique<ThreadPool>(nThreads, hMapping, fileSize, map);
 
-    std::vector<char> buffer(chunkSize);
-    std::vector<char> overflow;
-    auto start = std::chrono::high_resolution_clock::now();
-    size_t chunkId = 0;
+    size_t threadId = 0;
     for (size_t offset = 0; offset < fileSize; offset += chunkSize) 
     {        
         size_t readSize = offset + chunkSize < fileSize ? chunkSize : fileSize - offset;
@@ -73,27 +68,81 @@ void DataProcessor::process()
         {
             overflow++;
         }
-        overflow++;
+        if (overflow < fileSize)
+        {
+            overflow++;
+        }
         overflow = overflow - (offset + readSize);
         offset += overflow;
-        threadPool->enqueue(offset, readSize + overflow);
-        
+        total += readSize + overflow;
+        workers.emplace_back(
+            [this, mappedPtr, offset, readSize, overflow, threadId]
+            {
+                size_t offset_ = offset;
+                size_t readSize_ = readSize + offset;
+                size_t threadId_ = threadId;
+                processChunk(mappedPtr, offset_, readSize_, threadId_);
+            }
+        );
+        threadId++;
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms to get and send all chunks" << std::endl;
-    while (!threadPool->tasks.empty()) {  }
-    // Close the mapping object and file handle
+
+    for (auto& thread : workers)
+    {
+        thread.join();
+    }
     CloseHandle(hMapping);
     CloseHandle(hFile);
 }
 
-size_t DataProcessor::findLastNewLine(std::vector<char>& vec)
+int DataProcessor::floatParse(const char& v, int multiplier)
 {
-    auto it = std::find(vec.rbegin(), vec.rend(), '\n');
-    if (it == vec.rend()) {
-        return std::string::npos;
+    return (v - 48) * multiplier;
+}
+
+void DataProcessor::processChunk(char* mappedFile, size_t& offset, size_t& readSize, size_t& threadId)
+{
+    int value = 0;
+    bool negativeValue = false;
+    std::string station;
+    auto inserter = std::back_inserter<std::string>(station);
+    char c;
+    int multiplier = 100;
+    size_t len = offset;
+    while (len < readSize) {
+        c = mappedFile[len];
+        while (c != ';') {
+            *inserter = c;
+            ++len;
+            c = mappedFile[len];
+        }
+        len++;
+        c = mappedFile[len];
+        if (c == '-') {
+            negativeValue = true;
+            len++;
+            c = mappedFile[len];
+        }
+        while (c != '\n') {
+            if (c != '.') {
+                value += floatParse(c, multiplier);
+                multiplier /= 10;
+            }
+            len++;
+            c = mappedFile[len];
+        }
+        if (negativeValue) {
+            value *= -1;
+        }
+        map[threadId][station].update(value);
+        negativeValue = false;
+        value = 0;
+        multiplier = 100;
+        station.clear();
+        len++;
     }
-    return std::distance(it, vec.rend()) - 1;
+    //std::cout << "thread " << threadId << " finished" << std::endl;
+    //aggregateAndOutput();
 }
 
 void DataProcessor::aggregateAndOutput() 
