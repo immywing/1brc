@@ -104,35 +104,35 @@ void DataProcessor::processChunk(unsigned char* mappedFile, size_t& offset, size
     bool negativeValue = false;
     std::string station;
     auto inserter = std::back_inserter<std::string>(station);
-    unsigned char c;
+    //unsigned char c;
     int multiplier = 100;
     int mod = 1;
     size_t len = offset;
     size_t hash = 0;
     while (len < readSize) {
-        c = mappedFile[len];
-        while (c != ';') {
-            *inserter = c;
-            hash = (hash * 31) + c;
-            ++len;
-            c = mappedFile[len];
+        //c = mappedFile[len];
+        while (mappedFile[len] != ';') {
+            *inserter = mappedFile[len];
+            //hash = (hash * 31) + c;
+            len++;
+            //c = mappedFile[len];
         }
         len++;
-        c = mappedFile[len];
-        if (c == '-') {
+        //c = mappedFile[len];
+        if (mappedFile[len] == '-') {
             mod = -1;
             negativeValue = true;
             len++;
-            c = mappedFile[len];
+            //c = mappedFile[len];
         }
         else { mod = 1; }
         if (mappedFile[len + 1] == '.') {
-            value += floatParse(c, 10);
+            value += floatParse(mappedFile[len], 10);
             value += (mappedFile[len + 2] - 48);
             value *= mod;
         }
         else {
-            value += floatParse(c, 100);
+            value += floatParse(mappedFile[len], 100);
             value += floatParse(mappedFile[len + 1], 10);
             value += (mappedFile[len + 3] - 48);
             value *= mod;
