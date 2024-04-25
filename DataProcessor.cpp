@@ -6,7 +6,9 @@ DataProcessor::DataProcessor(std::wstring fpath, size_t nThreads) :
     fpath(fpath), nThreads(nThreads)
 {
     for (size_t i = 0; i < nThreads; ++i) {
+        map.push_back(std::unordered_map<std::string, WStationData>());
         map[i].reserve(65536);
+        table.push_back(HashTable());
     }
 }
 
@@ -101,7 +103,6 @@ int DataProcessor::floatParse(const unsigned char& v, int multiplier)
 void DataProcessor::processChunk(unsigned char* mappedFile, size_t& offset, size_t& readSize, size_t& threadId)
 {
     int value = 0;
-    bool negativeValue = false;
     std::string station;
     auto inserter = std::back_inserter<std::string>(station);
     //unsigned char c;
@@ -113,7 +114,7 @@ void DataProcessor::processChunk(unsigned char* mappedFile, size_t& offset, size
         //c = mappedFile[len];
         while (mappedFile[len] != ';') {
             *inserter = mappedFile[len];
-            //hash = (hash * 31) + c;
+            hash = (hash * 31) + mappedFile[len];
             len++;
             //c = mappedFile[len];
         }
@@ -121,7 +122,6 @@ void DataProcessor::processChunk(unsigned char* mappedFile, size_t& offset, size
         //c = mappedFile[len];
         if (mappedFile[len] == '-') {
             mod = -1;
-            negativeValue = true;
             len++;
             //c = mappedFile[len];
         }
@@ -148,13 +148,13 @@ void DataProcessor::processChunk(unsigned char* mappedFile, size_t& offset, size
         //if (negativeValue) {
         //    value *= -1;
         //}
-        //table[threadId].lookup_at(hash, station).update(value)
+        //table[threadId].lookup_at(hash, station).update(value);
         map[threadId][station].update(value);
-        negativeValue = false;
         value = 0;
         multiplier = 100;
         station.clear();
         len+= 5;
+        hash = 0;
         if (mappedFile[len] == '\n') { len++; } // inconsistend '\r\n' pattern in file, OR I have a bug elsewhere
     }
 }
@@ -164,7 +164,7 @@ void DataProcessor::aggregateAndOutput()
     std::unordered_map<std::string, WStationData> aggregate;
     long long i = 0;
     for (auto& outerPair : map) {
-        for (auto& innerPair : outerPair.second) {
+        for (auto& innerPair : outerPair) {
             i += innerPair.second.count;
             aggregate[innerPair.first].aggregate(innerPair.second);
         }

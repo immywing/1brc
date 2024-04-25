@@ -7,7 +7,7 @@ struct Node
 {
     const std::string key;
     WStationData value;
-    std::shared_ptr<Node> next;
+    Node* next;
     Node(const std::string& key, WStationData value);
 };
 
@@ -15,7 +15,7 @@ class HashTable
 {
 private:
     const size_t M = 65536;
-    std::vector<std::shared_ptr<Node>> table;
+    std::vector<Node*> table;
 public:
     HashTable();
     WStationData lookup_at(size_t& hash_value, const std::string& key);
