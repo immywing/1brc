@@ -105,57 +105,43 @@ void DataProcessor::processChunk(unsigned char* mappedFile, size_t& offset, size
     int value = 0;
     std::string station;
     auto inserter = std::back_inserter<std::string>(station);
-    //unsigned char c;
     int multiplier = 100;
     int mod = 1;
     size_t len = offset;
     size_t hash = 0;
     while (len < readSize) {
-        //c = mappedFile[len];
+
         while (mappedFile[len] != ';') {
             *inserter = mappedFile[len];
             hash = (hash * 31) + mappedFile[len];
             len++;
-            //c = mappedFile[len];
         }
         len++;
-        //c = mappedFile[len];
+
         if (mappedFile[len] == '-') {
             mod = -1;
             len++;
-            //c = mappedFile[len];
         }
         else { mod = 1; }
         if (mappedFile[len + 1] == '.') {
             value += floatParse(mappedFile[len], 10);
             value += (mappedFile[len + 2] - 48);
             value *= mod;
+            len += 5;
         }
         else {
             value += floatParse(mappedFile[len], 100);
             value += floatParse(mappedFile[len + 1], 10);
             value += (mappedFile[len + 3] - 48);
             value *= mod;
+            len += 6;
         }
-        //while (c != '\n') {
-        //    if (c != '.') {
-        //        value += floatParse(c, multiplier);
-        //        multiplier /= 10;
-        //    }
-        //    len++;
-        //    c = mappedFile[len];
-        //}
-        //if (negativeValue) {
-        //    value *= -1;
-        //}
-        //table[threadId].lookup_at(hash, station).update(value);
+
         map[threadId][station].update(value);
         value = 0;
         multiplier = 100;
         station.clear();
-        len+= 5;
         hash = 0;
-        if (mappedFile[len] == '\n') { len++; } // inconsistend '\r\n' pattern in file, OR I have a bug elsewhere
     }
 }
 
