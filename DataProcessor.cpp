@@ -146,7 +146,7 @@ void DataProcessor::processChunk(unsigned char* mappedFile, size_t& offset, size
 
 void DataProcessor::aggregateAndOutput() 
 {
-    std::unordered_map<std::string, WStationData> aggregate;
+    std::map<std::string, WStationData> aggregate;
     long long i = 0;
     for (auto& outerPair : map) {
         for (auto& innerPair : outerPair) {
