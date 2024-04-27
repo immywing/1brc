@@ -13,7 +13,6 @@
 #include <iomanip>
 #include <cstring>
 #include <io.h>
-#include "HashTable.h"
 #include <thread>
 class DataProcessor
 {
@@ -22,7 +21,6 @@ private:
 	std::wstring fpath;
 	size_t nThreads;
 	std::vector<std::unordered_map<std::string, WStationData>> map;
-	std::vector<HashTable> table;
 	void processChunk(unsigned char* mappedFile, size_t& offset, size_t& readSize, size_t& threadId);
 	int floatParse(const unsigned char& v, int multiplier);
 public:

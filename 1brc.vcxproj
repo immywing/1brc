@@ -138,12 +138,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="1brc.cpp" />
-    <ClCompile Include="HashTable.cpp" />
     <ClCompile Include="DataProcessor.cpp" />
     <ClCompile Include="WStationData.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="HashTable.h" />
     <ClInclude Include="DataProcessor.h" />
     <ClInclude Include="WStationData.h" />
   </ItemGroup>

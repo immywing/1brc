@@ -8,7 +8,6 @@ DataProcessor::DataProcessor(std::wstring fpath, size_t nThreads) :
     for (size_t i = 0; i < nThreads; ++i) {
         map.push_back(std::unordered_map<std::string, WStationData>());
         map[i].reserve(65536);
-        table.push_back(HashTable());
     }
 }
 
